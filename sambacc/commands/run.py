@@ -42,7 +42,9 @@ def _run_container_args(parser):
         ),
     )
     parser.add_argument(
-        "target", choices=["smbd", "winbindd", "ctdbd"], help="Which process to run"
+        "target",
+        choices=["smbd", "winbindd", "ctdbd"],
+        help="Which process to run",
     )
 
 
