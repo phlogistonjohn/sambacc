@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 #
 
+from sambacc import ctdb
 from sambacc import samba_cmds
 import sambacc.paths as paths
 
@@ -49,8 +50,10 @@ def _run_container_args(parser):
 
 
 @commands.command(name="run", arg_func=_run_container_args)
-def run_container(ctx: Context):
+def run_container(ctx: Context) -> None:
     """Run a specified server process."""
+    if ctx.instance_config.with_ctdb:
+        ctdb.ensure_smb_conf(config)
     if not getattr(ctx.cli, "no_init", False):
         init_container(ctx)
     else:
