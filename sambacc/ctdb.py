@@ -16,9 +16,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 #
 
+import os
+import subprocess
 import typing
 
 from sambacc import config
+from sambacc import samba_cmds
 from sambacc.netcmd_loader import template_config
 
 
@@ -35,6 +38,30 @@ def write_smb_conf(fh: typing.IO, iconfig: config.InstanceConfig) -> None:
     template_config(fh, iconfig.ctdb_smb_config())
 
 
-def migrate_tdb(iconfig: config.InstanceConfig) -> None:
+_SRC_TDB_FILES = [
+    "secrets.tdb",
+    "passdb.tdb",
+    "winbindd_idmap.tdb",
+    "group_mapping.tdb",
+    "account_policy.tdb",
+    "share_info.td",
+]
+
+
+def migrate_tdb(iconfig: config.InstanceConfig, dest_dir: str) -> None:
     """Migrate TDB files into CTDB."""
-    pass  # TODO
+    # TODO: these paths should be based on our instance config, not hard coded
+    tdb_locations = ["/var/lib/samba", "/var/lib/samba/private"]
+    for tdbfile in _SRC_TDB_FILES:
+        for parent in tdb_locations:
+            tdb_path = os.path.join(parent, tdbfile)
+            try:
+                _convert_tdb_file(tdb_path, dest_dir)
+            except FileNotFoundError:
+                pass
+
+
+def _convert_tdb_file(tdb_path: str, dest_dir: str) -> None:
+    opath = os.path.join(dest_dir, os.path.basename(tdb_path))
+    cmd = samba_cmds.ltdbtool["convert", "-s0", tdb_path, opath]
+    subprocess.check_call(list(cmd))
