@@ -53,7 +53,7 @@ def _run_container_args(parser):
 def run_container(ctx: Context) -> None:
     """Run a specified server process."""
     if ctx.instance_config.with_ctdb:
-        ctdb.ensure_smb_conf(config)
+        ctdb.ensure_smb_conf(ctx.instance_config)
     if not getattr(ctx.cli, "no_init", False):
         init_container(ctx)
     else:
@@ -66,7 +66,7 @@ def run_container(ctx: Context) -> None:
             join(ctx)
         # execute winbind process
         samba_cmds.execute(samba_cmds.winbindd_foreground)
-    elif cli.target == "ctdbd":
+    elif ctx.cli.target == "ctdbd":
         samba_cmds.execute(samba_cmds.ctdbd_foreground)
     else:
         raise Fail(f"invalid target process: {ctx.cli.target}")
