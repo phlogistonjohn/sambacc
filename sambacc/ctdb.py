@@ -45,6 +45,7 @@ _SRC_TDB_FILES = [
     "account_policy.tdb",
     "group_mapping.tdb",
     "passdb.tdb",
+    "registry.tdb",
     "secrets.tdb",
     "share_info.td",
     "winbindd_idmap.tdb",
