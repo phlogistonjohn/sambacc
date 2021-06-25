@@ -20,7 +20,7 @@ import argparse
 
 from sambacc import ctdb
 
-from .cli import commands
+from .cli import commands, Context
 
 
 def _ctdb_migrate_args(parser: argparse.ArgumentParser) -> None:
@@ -32,6 +32,6 @@ def _ctdb_migrate_args(parser: argparse.ArgumentParser) -> None:
 
 
 @commands.command(name="ctdb-migrate", arg_func=_ctdb_migrate_args)
-def ctdb_migrate(cli, config) -> None:
+def ctdb_migrate(ctx: Context) -> None:
     """Migrate standard samba databases to CTDB databases."""
-    ctdb.migrate_tdb(config, cli.dest_dir)
+    ctdb.migrate_tdb(ctx.instance_config, ctx.cli.dest_dir)
