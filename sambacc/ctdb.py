@@ -59,17 +59,20 @@ def migrate_tdb(iconfig: config.InstanceConfig, dest_dir: str) -> None:
     for tdbfile in _SRC_TDB_FILES:
         for parent in tdb_locations:
             tdb_path = os.path.join(parent, tdbfile)
-            try:
+            if _has_tdb_file(tdb_path):
                 _convert_tdb_file(tdb_path, dest_dir)
-            except FileNotFoundError:
-                pass
+
+
+def _has_tdb_file(tdb_path: str) -> bool:
+    # TODO: It would be preferable to handle errors from the convert
+    # function only, but it if ltdbtool is missing it raises FileNotFoundError
+    # and its not simple to disambiguate between the command missing and the
+    # tdb file missing.
+    print(f"Checking for {tdb_path}")
+    return os.path.isfile(tdb_path)
 
 
 def _convert_tdb_file(tdb_path: str, dest_dir: str) -> None:
-    print(f"Checking for {tdb_path}")
-    if not os.path.isfile(tdb_path):
-        # TODO: would be better to parse the error from the command
-        raise FileNotFoundError(tdb_path)
     opath = os.path.join(dest_dir, os.path.basename(tdb_path))
     print(f"Converting {tdb_path} to {opath} ...")
     cmd = samba_cmds.ltdbtool["convert", "-s0", tdb_path, opath]
