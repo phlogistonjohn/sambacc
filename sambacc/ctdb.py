@@ -42,12 +42,12 @@ def write_smb_conf(fh: typing.IO, iconfig: config.InstanceConfig) -> None:
 
 
 _SRC_TDB_FILES = [
-    "secrets.tdb",
-    "passdb.tdb",
-    "winbindd_idmap.tdb",
-    "group_mapping.tdb",
     "account_policy.tdb",
+    "group_mapping.tdb",
+    "passdb.tdb",
+    "secrets.tdb",
     "share_info.td",
+    "winbindd_idmap.tdb",
 ]
 
 
