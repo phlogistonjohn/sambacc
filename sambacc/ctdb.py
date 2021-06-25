@@ -25,6 +25,9 @@ from sambacc import samba_cmds
 from sambacc.netcmd_loader import template_config
 
 
+DB_DIR = "/var/lib/ctdb/persistent"
+
+
 def ensure_smb_conf(
     iconfig: config.InstanceConfig, path: str = config.SMB_CONF
 ) -> None:
