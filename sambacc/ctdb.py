@@ -52,7 +52,9 @@ _SRC_TDB_FILES = [
 ]
 
 
-def migrate_tdb(iconfig: config.InstanceConfig, dest_dir: str) -> None:
+def migrate_tdb(
+    iconfig: config.InstanceConfig, dest_dir: str, pnn: int = 0
+) -> None:
     """Migrate TDB files into CTDB."""
     # TODO: these paths should be based on our instance config, not hard coded
     tdb_locations = ["/var/lib/samba", "/var/lib/samba/private"]
@@ -60,7 +62,7 @@ def migrate_tdb(iconfig: config.InstanceConfig, dest_dir: str) -> None:
         for parent in tdb_locations:
             tdb_path = os.path.join(parent, tdbfile)
             if _has_tdb_file(tdb_path):
-                _convert_tdb_file(tdb_path, dest_dir)
+                _convert_tdb_file(tdb_path, dest_dir, pnn=pnn)
 
 
 def _has_tdb_file(tdb_path: str) -> bool:
@@ -72,8 +74,9 @@ def _has_tdb_file(tdb_path: str) -> bool:
     return os.path.isfile(tdb_path)
 
 
-def _convert_tdb_file(tdb_path: str, dest_dir: str) -> None:
-    opath = os.path.join(dest_dir, os.path.basename(tdb_path))
+def _convert_tdb_file(tdb_path: str, dest_dir: str, pnn: int = 0) -> None:
+    orig_name = os.path.basename(tdb_path)
+    opath = os.path.join(dest_dir, f"{orig_name}.{pnn}")
     print(f"Converting {tdb_path} to {opath} ...")
     cmd = samba_cmds.ltdbtool["convert", "-s0", tdb_path, opath]
     subprocess.check_call(list(cmd))
