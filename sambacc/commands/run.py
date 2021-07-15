@@ -43,6 +43,11 @@ def _run_container_args(parser):
         ),
     )
     parser.add_argument(
+        "--child-ctdbd",
+        action="store_true",
+        help=("Run ctdb as a child process (of tini)."),
+    )
+    parser.add_argument(
         "target",
         choices=["smbd", "winbindd", "ctdbd"],
         help="Which process to run",
@@ -67,6 +72,9 @@ def run_container(ctx: Context) -> None:
         # execute winbind process
         samba_cmds.execute(samba_cmds.winbindd_foreground)
     elif ctx.cli.target == "ctdbd":
-        samba_cmds.execute(samba_cmds.ctdbd_foreground_tini)
+        if ctx.cli.child_ctdbd:
+            samba_cmds.execute(samba_cmds.ctdbd_foreground_tini)
+        else:
+            samba_cmds.execute(samba_cmds.ctdbd_foreground)
     else:
         raise Fail(f"invalid target process: {ctx.cli.target}")
