@@ -67,6 +67,6 @@ def run_container(ctx: Context) -> None:
         # execute winbind process
         samba_cmds.execute(samba_cmds.winbindd_foreground)
     elif ctx.cli.target == "ctdbd":
-        samba_cmds.execute(['tini'] + list(samba_cmds.ctdbd_foreground))
+        samba_cmds.execute(samba_cmds.ctdbd_foreground_tini)
     else:
         raise Fail(f"invalid target process: {ctx.cli.target}")

@@ -107,6 +107,12 @@ ctdbd_foreground = ctdbd["--interactive"]
 
 ltdbtool = SambaCommand("ltdbtool")
 
+ctdbd_foreground_tini = SambaCommand("tini")[
+    "--",
+    "/usr/sbin/ctdbd",
+    "--interactive",
+]
+
 
 def encode(value: typing.Union[str, bytes, None]) -> bytes:
     if value is None:
