@@ -119,7 +119,7 @@ class SMBConf:
                 for _, (sname, params) in services:
                     self[sname] = params
 
-    def import_smbconf(self, src: S, batch_size: int = 100) -> None:
+    def import_smbconf(self, src: S, batch_size: typing.Optional[int] = 100) -> None:
         if batch_size is None:
             return self.import_smbconf_all(src)
         return self.import_smbconf_batched(src, batch_size)
