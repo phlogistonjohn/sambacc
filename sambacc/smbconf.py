@@ -3,26 +3,39 @@
 
 from itertools import groupby
 import os
+import typing
 
-import samba.samba3.param
-import samba.samba3.smbconf
-import samba.smbconf
+import samba.samba3.param  # type: ignore
+import samba.samba3.smbconf  # type: ignore
+import samba.smbconf  # type: ignore
+
+
+S = typing.TypeVar("S", bound="SMBConf")
+ST = typing.Type[S]
+optlist = list[tuple[str, str]]
+opts = typing.Union[
+    typing.Iterable[tuple[str, str]],
+    dict[str, str],
+]
+
+
+def _options(v: opts) -> optlist:
+    if isinstance(v, dict):
+        return list(v.items())
+    return list(v)
 
 
 class SMBConf:
-    S = typing.TypeVar("S", bound="Parent")
-    T = typing.Type[S]
-
     def __init__(self, smbconf) -> None:
         self._smbconf = smbconf
 
     @classmethod
-    def from_file(cls: T, path: str) -> S:
+    def from_file(cls: ST, path: str) -> S:
         return cls(samba.smbconf.init_txt(path))
 
     @classmethod
     def from_registry(
-        cls: T,
+        cls: ST,
         key: typing.Optional[str] = None,
         configfile: typing.Optional[str] = None,
     ) -> S:
@@ -36,8 +49,8 @@ class SMBConf:
         return cls(samba.samba3.smbconf.init_reg(key))
 
     @classmethod
-    def from_prefix(cls: T, path: str) -> S:
-        return clw(samba.samba3.smbconf.init(path))
+    def from_prefix(cls: ST, path: str) -> S:
+        return cls(samba.samba3.smbconf.init(path))
 
     def __enter__(self) -> None:
         """Start a transaction."""
@@ -49,34 +62,34 @@ class SMBConf:
             return
         self._smbconf.transaction_cancel()
 
-    def get_share(self, name: str):
+    def get_share(self, name: str) -> tuple[str, optlist]:
         return self._smbconf.get_share(name)
 
-    def share_names(self):
+    def share_names(self) -> list[str]:
         return self._smbconf.share_names()
 
-    def all_shares(self):
+    def all_shares(self) -> list[tuple[str, optlist]]:
         return self._smbconf.get_config()
 
-    def delete_share(self, name: str):
+    def delete_share(self, name: str) -> None:
         return self._smbconf.delete_share(name)
 
     def create_share(
         self,
         name: str,
-        params: typing.Optional[typing.Iterator[tuple[str, str]]] = None,
-    ):
+        params: typing.Optional[opts] = None,
+    ) -> None:
         if params is None:
             self._smbconf.create_share(name)
         else:
-            self._smbconf.create_set_share(name, list(params))
+            self._smbconf.create_set_share(name, _options(params))
 
     # support some basic dict-like methods
 
-    def __getitem__(self, name):
-        self.get_share(name)[1]
+    def __getitem__(self, name: str) -> optlist:
+        return self.get_share(name)[1]
 
-    def __setitem__(self, name, value):
+    def __setitem__(self, name: str, value: opts) -> None:
         try:
             self.delete_share(name)
         except samba.smbconf.SMBConfError as err:
@@ -84,17 +97,17 @@ class SMBConf:
                 raise
         self.create_share(name, value)
 
-    def __iter__(self):
+    def __iter__(self) -> typing.Iterable[str]:
         return iter(self.share_names())
 
     # configuration import funcs
 
-    def import_smbconf_all(self, src):
+    def import_smbconf_all(self, src: S) -> None:
         with self:
             for sname, params in src.all_shares():
                 self[sname] = params
 
-    def import_smbconf_batched(self, src, batch_size):
+    def import_smbconf_batched(self, src: S, batch_size: int) -> None:
         # based on a comment in samba's source code for the net command
         # only import N items at a time so that the transaction does
         # not exceed talloc memory limits
@@ -106,7 +119,7 @@ class SMBConf:
                 for _, (sname, params) in services:
                     self[sname] = params
 
-    def import_smbconf(self, src, batch_size=100):
+    def import_smbconf(self, src: S, batch_size: int = 100) -> None:
         if batch_size is None:
             return self.import_smbconf_all(src)
         return self.import_smbconf_batched(src, batch_size)
@@ -114,12 +127,12 @@ class SMBConf:
 
 def import_smb_conf(smb_conf_src: str) -> None:
     """Behaves much like `net conf import`."""
-    conf_source = SMBConf.from_file(smb_conf_src)
-    conf_sink = SMBConf.from_registry()
+    conf_source: SMBConf = SMBConf.from_file(smb_conf_src)
+    conf_sink: SMBConf = SMBConf.from_registry()
     conf_sink.import_smbconf(conf_source)
 
 
-def main():
+def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser()
