@@ -10,26 +10,33 @@ import samba.smbconf
 
 
 class SMBConf:
+    S = typing.TypeVar("S", bound="Parent")
+    T = typing.Type[S]
+
     def __init__(self, smbconf) -> None:
         self._smbconf = smbconf
 
     @classmethod
-    def from_file(cls, path) -> "CLS":
+    def from_file(cls: T, path: str) -> S:
         return cls(samba.smbconf.init_txt(path))
 
     @classmethod
-    def from_registry(cls, key=None, configfile=None) -> "CLS":
+    def from_registry(
+        cls: T,
+        key: typing.Optional[str] = None,
+        configfile: typing.Optional[str] = None,
+    ) -> S:
         # TODO: is initializing the s3 configuration here the right
         # place to do it??
         if configfile is None:
-            configfile = os.environ.get('SMB_CONF', '/etc/samba/smb.conf')
+            configfile = os.environ.get("SMB_CONF", "/etc/samba/smb.conf")
         s3_lp = samba.samba3.param.get_context()
         s3_lp.load(configfile)
 
         return cls(samba.samba3.smbconf.init_reg(key))
 
     @classmethod
-    def from_prefix(cls, path) -> "CLS":
+    def from_prefix(cls: T, path: str) -> S:
         return clw(samba.samba3.smbconf.init(path))
 
     def __enter__(self) -> None:
@@ -42,7 +49,7 @@ class SMBConf:
             return
         self._smbconf.transaction_cancel()
 
-    def get_share(self, name):
+    def get_share(self, name: str):
         return self._smbconf.get_share(name)
 
     def share_names(self):
@@ -51,10 +58,14 @@ class SMBConf:
     def all_shares(self):
         return self._smbconf.get_config()
 
-    def delete_share(self, name):
+    def delete_share(self, name: str):
         return self._smbconf.delete_share(name)
 
-    def create_share(self, name, params=None):
+    def create_share(
+        self,
+        name: str,
+        params: typing.Optional[typing.Iterator[tuple[str, str]]] = None,
+    ):
         if params is None:
             self._smbconf.create_share(name)
         else:
