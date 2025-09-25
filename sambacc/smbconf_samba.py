@@ -111,8 +111,20 @@ class SMBConf:
                 raise
         self._smbconf.create_set_share(name, value)
 
+    def new_share(self, name: str, value: list[tuple[str, str]]) -> None:
+        """Create and set a share assuming no share already exists.
+        If unsure a share already exists use __setitem__.
+        """
+        self._smbconf.create_set_share(name, value)
+
     def __iter__(self) -> typing.Iterator[str]:
         return iter(self._smbconf.share_names())
+
+    def drop(self) -> None:
+        """Drop the entire configuration, resetting it to an empty state."""
+        if not self.writeable:
+            raise ValueError("SMBConf is not writable")
+        self._smbconf.drop()
 
     def import_smbconf(
         self, src: ConfigStore, batch_size: typing.Optional[int] = 100
