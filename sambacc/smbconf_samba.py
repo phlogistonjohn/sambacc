@@ -155,6 +155,35 @@ class SMBConf:
                     self[sname] = src[sname]
 
 
+class SMBConfLoader:
+    def __init__(self, *, smbconf: typing.Optional[SMBConf] = None) -> None:
+        if smbconf is None:
+            smbconf = SMBConf.from_registry()
+        if not smbconf.writeable:
+            raise ValueError(
+                'Read-only SMBConf can not be used in the loader'
+            )
+        self._smbconf = smbconf
+
+    def import_config(
+        self, iconfig: config.InstanceConfig, *, batch_size: int = 100
+    ) -> None:
+        """Import an entire instance config to the active samba config."""
+        # NOTE: this works much like the import_smbconf function but instead
+        # of loading from another smb configuration we load from an
+        # Instance Config.
+        with self._smbconf:
+            self._smbconf.drop()
+            self._smbconf.new_share("global", list(iconfig.global_options()))
+
+        for batch in _batched(iconfig.shares(), batch_size):
+            with self._smbconf:
+                for share in batch:
+                    self._smbconf.new_share(
+                        share.name, list(share.share_options())
+                    )
+
+
 T = typing.TypeVar('T')
 
 
