@@ -54,6 +54,7 @@ class SMBConf:
 
     def __init__(self, smbconf: typing.Any) -> None:
         self._smbconf = smbconf
+        self._smbconf_error = _smbconf().SMBConfError
 
     @classmethod
     def from_file(cls: typing.Type[_Self], path: str) -> _Self:
@@ -94,7 +95,7 @@ class SMBConf:
     def __getitem__(self, name: str) -> list[tuple[str, str]]:
         try:
             n2, values = self._smbconf.get_share(name)
-        except _smbconf().SMBConfError as err:
+        except self._smbconf_error as err:
             if err.error_code == _smbconf().SBC_ERR_NO_SUCH_SERVICE:
                 raise KeyError(name)
             raise
@@ -105,7 +106,7 @@ class SMBConf:
     def __setitem__(self, name: str, value: list[tuple[str, str]]) -> None:
         try:
             self._smbconf.delete_share(name)
-        except _smbconf().SMBConfError as err:
+        except self._smbconf_error as err:
             if err.error_code != _smbconf().SBC_ERR_NO_SUCH_SERVICE:
                 raise
         self._smbconf.create_set_share(name, value)
