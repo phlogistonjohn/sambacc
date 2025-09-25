@@ -149,13 +149,25 @@ class SMBConf:
     def _import_smbconf_batched(
         self, src: ConfigStore, batch_size: int
     ) -> None:
-        # based on a comment in samba's source code for the net command
-        # only import N 'shares' at a time so that the transaction does
-        # not exceed talloc memory limits
-        def _batch_keyfunc(item: tuple[int, str]) -> int:
-            return item[0] // batch_size
-
-        for _, snames in itertools.groupby(enumerate(src), _batch_keyfunc):
+        for batch in _batched(src, batch_size):
             with self:
-                for _, sname in snames:
+                for sname in batch:
                     self[sname] = src[sname]
+
+
+T = typing.TypeVar('T')
+
+
+# NOTE: Python 3.12 added an itertools.batched but we can't be guaranteed
+# to always run on a python new enough yet.
+# But this should match that functions behavior and in the future we
+# can drop this.
+def _batched(items: typing.Iterable[T], batch_size: int) -> typing.Tuple[T]:
+    # based on a comment in samba's source code for the net command
+    # only import N 'shares' at a time so that the transaction does
+    # not exceed talloc memory limits
+    def _batch_keyfunc(item: tuple[int, str]) -> int:
+        return item[0] // batch_size
+
+    for _, group in itertools.groupby(enumerate(items), _batch_keyfunc):
+        yield tuple(v for _, v in group)
