@@ -856,4 +856,4 @@ class CLILeaderLocator:
     def __exit__(
         self, exc_type: ExcType, exc_val: ExcValue, exc_tb: ExcTraceback
     ) -> bool:
-        return True
+        return None
