@@ -154,9 +154,10 @@ class SMBConf:
                 for sname in batch:
                     self[sname] = src[sname]
 
+_ct_init: list[int] = []
 
 class SMBConfLoader:
-    def __init__(self, *, smbconf: typing.Optional[SMBConf] = None) -> None:
+    def __init__(self, *, smbconf: typing.Optional[SMBConf] = None, scary_init: bool = False) -> None:
         if smbconf is None:
             smbconf = SMBConf.from_registry()
         if not smbconf.writeable:
@@ -164,6 +165,12 @@ class SMBConfLoader:
                 'Read-only SMBConf can not be used in the loader'
             )
         self._smbconf = smbconf
+
+        if scary_init and not _ct_init:
+            import ctypes
+            lxtps = ctypes.CDLL('/usr/lib64/samba/libxattr-tdb-private-samba.so')
+            addr = lxtps._talloc_stackframe()
+            _ct_init.append(addr)
 
     def import_config(
         self, iconfig: config.InstanceConfig, *, batch_size: int = 100
