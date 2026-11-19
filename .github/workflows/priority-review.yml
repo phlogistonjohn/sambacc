@@ -1,0 +1,31 @@
+---
+name: Priority Review Label
+
+on:
+  schedule:
+    - cron: 17 3 * * *
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Label old, open, non-draft PRs
+        run: |
+          cutoff=$(date -u -d "15 days ago" +%Y-%m-%d)
+          gh pr list \
+            --state open \
+            --search "draft:false created:<${cutoff} -label:priority-review" \
+            --json number \
+            --jq '.[].number' |
+          while read -r pr; do
+            gh pr edit "$pr" --add-label priority-review
+          done

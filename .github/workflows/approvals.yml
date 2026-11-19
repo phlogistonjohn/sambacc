@@ -1,0 +1,139 @@
+---
+name: Approvals
+
+on:
+  # pull_request_target runs with a write token for fork PRs. This workflow
+  # never checks out or runs PR code, so that is safe here.
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, labeled, unlabeled]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions:
+  checks: write
+  pull-requests: read
+
+jobs:
+  approvals:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      # A workflow job can only pass or fail, so report the result as a
+      # separate check run. When the requirements are not met the check run is
+      # left "in_progress" (pending, not failed). A "neutral" conclusion would
+      # count as passing for required checks and let auto-merge proceed.
+      - name: Report approval status
+        shell: python
+        run: |
+          import json
+          import os
+          import subprocess
+          import sys
+
+          REPO = os.environ["GH_REPO"]
+          PR = os.environ["PR"]
+          HEAD_SHA = os.environ["HEAD_SHA"]
+          PRIORITY_LABEL = "priority-review"
+          # Maintainers are users with write access or higher on the repo.
+          MAINTAINER_PERMISSIONS = {"admin", "maintain", "write"}
+          DECISIONS = {"APPROVED", "CHANGES_REQUESTED", "DISMISSED"}
+
+
+          def gh(*args):
+              result = subprocess.run(
+                  ["gh", *args], check=True, capture_output=True, text=True
+              )
+              return result.stdout
+
+
+          def approvers():
+              """Users whose latest approve/request-changes/dismiss review is
+              an approval.
+              """
+              # --slurp wraps the per-page arrays into a single JSON document
+              out = gh(
+                  "api", "--paginate", "--slurp", f"repos/{REPO}/pulls/{PR}/reviews"
+              )
+              reviews = [r for page in json.loads(out) for r in page]
+              latest = {}
+              for review in sorted(reviews, key=lambda r: r["submitted_at"]):
+                  if review["user"] and review["state"] in DECISIONS:
+                      latest[review["user"]["login"]] = review["state"]
+              return [u for u, state in latest.items() if state == "APPROVED"]
+
+
+          def has_priority_label():
+              out = gh("pr", "view", PR, "--json", "labels")
+              labels = json.loads(out)["labels"]
+              return any(lbl["name"] == PRIORITY_LABEL for lbl in labels)
+
+
+          def is_maintainer(user):
+              out = gh(
+                  "api",
+                  f"repos/{REPO}/collaborators/{user}/permission",
+                  "--jq",
+                  ".permission",
+              )
+              return out.strip() in MAINTAINER_PERMISSIONS
+
+
+          def check_sufficient_approvals(ok, **kwargs):
+              title = "Waiting for approvals"
+              state = ["-f", "status=in_progress"]
+              if ok:
+                  title = "Approval requirements met"
+                  state = ["-f", "status=completed", "-f", "conclusion=success"]
+              terms = [f"{key}={value}" for key, value in kwargs.items()]
+              summary = ", ".join(terms)
+              print(f"{title}: {summary}")
+
+              gh(
+                  "api",
+                  f"repos/{REPO}/check-runs",
+                  "-f",
+                  "name=approvals",
+                  "-f",
+                  f"head_sha={HEAD_SHA}",
+                  *state,
+                  "-f",
+                  f"output[title]={title}",
+                  "-f",
+                  f"output[summary]={summary}",
+              )
+
+
+          users = approvers()
+          if len(users) >= 2:
+              # sufficient number of general reviews
+              check_sufficient_approvals(True, approvals=len(users))
+              sys.exit(0)
+          elif len(users) == 0:
+              check_sufficient_approvals(False, approvals=len(users))
+              sys.exit(0)
+
+          # we do this stuff after checking the >=2, ==0 conditions to
+          # avoid hitting the API again unnecessarily.
+          maintainers = sum(1 for u in users if is_maintainer(u))
+          priority = has_priority_label()
+
+          if priority and maintainers >= 1:
+              # sufficient number of maintainer reviews
+              check_sufficient_approvals(
+                  True,
+                  priority="yes",
+                  approvals=len(users),
+                  maintainers=maintainers,
+              )
+              sys.exit(0)
+
+          check_sufficient_approvals(
+                  False,
+                  priority="yes" if priority else "no",
+                  approvals=len(users),
+                  maintainers=maintainers,
+          )
