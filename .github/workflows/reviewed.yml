@@ -1,5 +1,5 @@
 ---
-name: Approvals
+name: Check-Reviews
 
 on:
   # pull_request_target runs with a write token for fork PRs. This workflow
@@ -14,7 +14,7 @@ permissions:
   pull-requests: read
 
 jobs:
-  approvals:
+  reviews:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
