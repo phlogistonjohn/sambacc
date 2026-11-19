@@ -3,9 +3,9 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [jjm-automation-wip]
   pull_request:
-    branches: [master]
+    branches: [jjm-automation-wip]
   schedule:
     - cron: 1 1 * * *
 
